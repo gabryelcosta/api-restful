@@ -80,4 +80,4 @@ class NotesController{
   }
 }
 
-module.exports = notesController
+module.exports = NotesController;
