@@ -2,14 +2,22 @@ const knex = require("../database/knex");
 
 class NotesController{
   async create(request, response){
-    const{ title, description, tags } = request.body
+    const{ title, description, tags, links } = request.body
     const user_id = request.user.id
 
     const [notes_id] = await knex("notes").insert({ title, description, user_id})
 
+    const linkInsert = links.map(link =>{
+      return {
+        note_id,
+        url: link
+      }
+    })
+    await knex("links").insert(linkInsert)
+
     const tagsInsert = tags.map(name =>{
       return {
-        notes_id,
+        note_id,
         name,
         user_id
       }
@@ -24,10 +32,12 @@ class NotesController{
 
     const notes = await knex("notes").where({ id }).first()
     const tags = await knex("tags").where({ notes_id: id }).orderBy("name")
+    const links = await knex("links").where({ note_id: id}).orderBy("created_at")
 
     return response.json({
       ...notes,
-      tags
+      tags,
+      links
     })
   }
 
@@ -56,7 +66,7 @@ class NotesController{
         .where("notes.user_id", user_id)
         .whereLike("notes.title", `%${title}%`)
         .whereIn("name", filterTags)
-        .innerJoin("notes", "notes.id", "tags.notes_id")
+        .innerJoin("notes", "notes.id", "tags.note_id")
         .orderBy("notes.title")
     }
       else {
@@ -67,12 +77,12 @@ class NotesController{
     }
 
     const userTags = await knex("tags").where({ user_id })
-    const notesWithTags = notes.map(notes =>{
-      const notesTags = userTags.filter(tag => tag.notes_id === notes.id)
+    const notesWithTags = notes.map(note =>{
+      const noteTags = userTags.filter(tag => tag.note_id === note.id)
 
         return {
-          ...notes,
-          tags: notesTags
+          ...note,
+          tags: noteTags
       }
     })
 
